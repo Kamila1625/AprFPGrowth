@@ -2,6 +2,7 @@
 import csv
 import sys
 import time
+import copy
 
 class FPNode:
     def __init__(self, f = None, pv = None, sv = None, cv = 0):
@@ -32,6 +33,8 @@ class FPNode:
                 nextNode = node
                 break
         return nextNode
+    def returnPr(self):
+        return self.product
     def returnSupp(self):
         return self.supp
     def setSupp(self, s):
@@ -41,18 +44,18 @@ class FPNode:
     def returnMark(self):
         return self.mark
     def delFromNext(self, pr):
-        for next in self.listOfNext:
-            if next.product == pr:
-                del next
+        for i in range(len(self.listOfNext)):
+            if self.listOfNext[i].product == pr:
+                del self.listOfNext[i]
+                break
 
 def summClevel(fptr, pridx, dL):
     c = 0
     for node in fptr[pridx]:
         c = c + node.returnSupp()
-    return float(c) / dL
+    return (float(c) / dL)
 
-def makeNewtree(tree, newtree, inxpr, sProd):
-    newtree = list(tree)
+def makeNewtree(newtree, inxpr, sProd):
 
     for elem in newtree[inxpr]:
         elem.Mark()
@@ -66,17 +69,19 @@ def makeNewtree(tree, newtree, inxpr, sProd):
         for j in range(len(newtree[i])):
             if newtree[i][j].returnMark() == False:
                 prev = newtree[i][j].returnPrev()
-                prev.delFromNext(sProd[i])
-                #dellist.append(j)
-        #hlen = len(dellist)
-        #for h in range(hlen):
-            #del newtree[i][h]
+                if prev != None:
+                    prev.delFromNext(sProd[i])
+                dellist.append(j)
+
+        hlen = len(dellist)
+        for h in range(hlen - 1, -1, -1):
+            del newtree[i][dellist[h]]
 
     for elem in newtree[inxpr]:
         elem.NotMark()
-        elem.setSupp(1)
         pelem = elem.returnPrev()
         while(pelem != None):
+            pelem.NotMark()
             sum = 0
             nlist = pelem.retListOfNext()
             for n in nlist:
@@ -87,19 +92,38 @@ def makeNewtree(tree, newtree, inxpr, sProd):
     for elem in newtree[inxpr]:
         pelem = elem.returnPrev()
         pelem.delFromNext(sProd[inxpr])
-    #newtree[inxpr].clear()
+    newtree[inxpr] = []
 
 
-def FPFind(sProd, dL, minsup, tree, root, phi, r):
+def FPFind(sProd, dL, minsup, tree, root, phi, r, arOfSets):
     for inx in range(len(tree) - 1, -1, -1):
-        if summClevel(tree, inx, dL) >= minsup:
+        s = summClevel(tree, inx, dL)
+        if s >= minsup:
             p = list(phi)
             p.append(sProd[inx])
-            phi.append(sProd[inx])
             r.append(p)
-            ntree = []
-            makeNewtree(tree, ntree, inx, sProd)
-            FPFind(sProd, dL, minsup, ntree, root, phi, r)
+            sizeOfSet = len(p)
+            if len(arOfSets) < sizeOfSet:
+                arOfSets.append(dict())
+            arOfSets[sizeOfSet - 1][tuple(sorted(p))] = s
+            ntree = copy.deepcopy(tree)
+            makeNewtree(ntree, inx, sProd)
+            FPFind(sProd, dL, minsup, ntree, root, p, r, arOfSets)
+
+def assocRules(r, p, x, mconf, sets):
+    for idx in range(len(p)):
+        if len(x) == 0 or p[idx] > x[-1]:
+            p1 = list(p)
+            p1.pop(idx)
+            x1 = list(x)
+            x1.append(p[idx])
+            temp = sorted(p1 + x1)
+            suppTemp = sets[len(temp) - 1][tuple(temp)]
+            suppP1 = sets[len(p1) - 1][tuple(p1)]
+            if float(suppTemp) / float(suppP1) > mconf:
+                r[tuple(p1)] = tuple(x1)
+                if len(p1) > 1:
+                    assocRules(r, p1, x1, mconf, sets)
 
 dataFileName = sys.argv[1]
 minsup = float(sys.argv[2])
@@ -126,8 +150,6 @@ for i in range(len(product)):
         s = s + int(data[j][i])
     friquency[i] = s
 
-#print friquency
-
 #отсортировать product по friquency
 sortProduct = []
 while (len(friquency) != 0):
@@ -139,7 +161,6 @@ while (len(friquency) != 0):
 
 dataSort = []
 
-print sortProduct
 #перебрать построчно data в порядке friquency, формируя списки номеров продуктов, если 1 есть в нужном продукте
 for i in range(dataLength):
     transaction = []
@@ -147,8 +168,6 @@ for i in range(dataLength):
         if int(data[i][sortProduct[j]]) == 1:
             transaction.append(sortProduct[j])
     dataSort.append(transaction)
-
-print dataSort
 
 #построить FPдерево
 fptree = []
@@ -170,10 +189,20 @@ for d in dataSort:
 
 r = []
 phi = []
-FPFind(sortProduct, dataLength, minsup, fptree, v0, phi, r)
+fptree1 = copy.deepcopy(fptree)
+arrayOfSets = []
+FPFind(sortProduct, dataLength, minsup, fptree1, v0, phi, r, arrayOfSets)
 
-print r
+#вывести правила
+rules = {}
+for set in r:
+    if len(set) == 1:
+        continue
+    phi = sorted(list(set))
+    y = list()
+    assocRules(rules, phi, y, minconf, arrayOfSets)
 
 alltime = time.time() - startTime
-
 print (alltime)
+for key in rules:
+    print(str(key) + " -> " + str(rules[key]))

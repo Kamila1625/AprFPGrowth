@@ -28,8 +28,6 @@ def assocRules(r, p, x, mconf, l, d):
                 if len(p1) > 1:
                     assocRules(r, p1, x1, mconf, l, d)
 
-
-
 dataFileName = sys.argv[1]
 minsup = float(sys.argv[2])
 minconf = float(sys.argv[3])
@@ -61,7 +59,6 @@ for i in range(len(product)):
         l.append(i)
         t = tuple(l)
         L0[t] = friquency[i] / float(dataLength)
-print L0
 
 k = 1
 L = []
@@ -94,7 +91,6 @@ while len(L[k - 1]) != 0:
                     # добавляем ck в Lk вместе с его support
                     Lk[tuple(ck)] = s
     L.append(Lk)
-    print L[k]
     k = k + 1
 
 
@@ -105,7 +101,6 @@ for i in range(1, k - 1):
         phi = list(key)
         y = list()
         assocRules(rules, phi, y, minconf, dataLength, data)
-
 
 alltime = time.time() - startTime
 
