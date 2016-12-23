@@ -24,7 +24,8 @@ def assocRules(r, p, x, mconf, l, d):
             x1 = list(x)
             x1.append(p[idx])
             if condSupp(l, p1, x1, d) > mconf:
-                r[tuple(p1)] = tuple(x1)
+                r[0].append(tuple(p1))
+                r[1].append(tuple(x1))
                 if len(p1) > 1:
                     assocRules(r, p1, x1, mconf, l, d)
 
@@ -95,7 +96,9 @@ while len(L[k - 1]) != 0:
 
 
 #вывести правила
-rules = {}
+rules = []
+rules.append(list())
+rules.append(list())
 for i in range(1, k - 1):
     for key in L[i]:
         phi = list(key)
@@ -105,7 +108,7 @@ for i in range(1, k - 1):
 alltime = time.time() - startTime
 
 print (alltime)
-for key in rules:
-    print(str(key) + " -> " + str(rules[key]))
+for i in range(len(rules[1])):
+    print(str(rules[0][i]) + " -> " + str(rules[1][i]))
 
 

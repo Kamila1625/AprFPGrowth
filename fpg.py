@@ -120,8 +120,10 @@ def assocRules(r, p, x, mconf, sets):
             temp = sorted(p1 + x1)
             suppTemp = sets[len(temp) - 1][tuple(temp)]
             suppP1 = sets[len(p1) - 1][tuple(p1)]
-            if float(suppTemp) / float(suppP1) > mconf:
-                r[tuple(p1)] = tuple(x1)
+            conf = float(suppTemp) / float(suppP1)
+            if conf > mconf:
+                r[0].append(tuple(p1))
+                r[1].append(tuple(x1))
                 if len(p1) > 1:
                     assocRules(r, p1, x1, mconf, sets)
 
@@ -194,7 +196,9 @@ arrayOfSets = []
 FPFind(sortProduct, dataLength, minsup, fptree1, v0, phi, r, arrayOfSets)
 
 #вывести правила
-rules = {}
+rules = []
+rules.append(list())
+rules.append(list())
 for set in r:
     if len(set) == 1:
         continue
@@ -204,5 +208,7 @@ for set in r:
 
 alltime = time.time() - startTime
 print (alltime)
-for key in rules:
-    print(str(key) + " -> " + str(rules[key]))
+
+for i in range(len(rules[1])):
+    print(str(rules[0][i]) + " -> " + str(rules[1][i]))
+
