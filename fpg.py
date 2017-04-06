@@ -55,6 +55,38 @@ def summClevel(fptr, pridx, dL):
         c = c + node.returnSupp()
     return (float(c) / dL)
 
+def MakeFPTree(fptree, sortProduct, dataSort):
+    for i in sortProduct:
+        fptree.append(list())
+    v0 = FPNode()
+    for d in dataSort:
+        v = v0
+        for pr in d:
+            n = v.isProductInNext(pr)
+            if n == None:
+                n = FPNode(pr, v)
+                v.addNext(n)
+                fptree[sortProduct.index(pr)].append(n)
+            v = n
+            v.addSupp()
+    return v0
+
+def SortProductByFrequency(sortProduct, frequency, dataLength, minsup):
+    while (len(frequency) != 0):
+        pr = max(frequency, key=frequency.get)
+        if (float(frequency[pr]) / float(dataLength) < minsup):
+            break
+        del frequency[pr]
+        sortProduct.append(pr)
+
+def SortingDataTransactions(dataLength, sortProduct, dataSort, data):
+    for i in range(dataLength):
+        transaction = []
+        for j in range(len(sortProduct)):
+            if int(data[i][sortProduct[j]]) == 1:
+                transaction.append(sortProduct[j])
+        dataSort.append(transaction)
+
 def makeNewtree(newtree, inxpr, sProd):
 
     for elem in newtree[inxpr]:
@@ -127,88 +159,65 @@ def assocRules(r, p, x, mconf, sets):
                 if len(p1) > 1:
                     assocRules(r, p1, x1, mconf, sets)
 
-dataFileName = sys.argv[1]
-minsup = float(sys.argv[2])
-minconf = float(sys.argv[3])
+if __name__ == "__main__":
 
-data = []
-dataLength = 0
-with open(dataFileName, 'rb') as f:
-    reader = csv.reader(f)
-    for row in reader:
-        del row[:1]
-        data.append(row)
-        dataLength = dataLength + 1
+    dataFileName = sys.argv[1]
+    minsup = float(sys.argv[2])
+    minconf = float(sys.argv[3])
 
-
-startTime = time.time()
-
-product = [i for i in range(len(data[0]))]
-
-friquency = {}
-for i in range(len(product)):
-    s = 0
-    for j in range(dataLength):
-        s = s + int(data[j][i])
-    friquency[i] = s
-
-#отсортировать product по friquency
-sortProduct = []
-while (len(friquency) != 0):
-    pr = max(friquency, key=friquency.get)
-    if (float(friquency[pr]) / float(dataLength) < minsup):
-        break
-    del friquency[pr]
-    sortProduct.append(pr)
-
-dataSort = []
-
-#перебрать построчно data в порядке friquency, формируя списки номеров продуктов, если 1 есть в нужном продукте
-for i in range(dataLength):
-    transaction = []
-    for j in range(len(sortProduct)):
-        if int(data[i][sortProduct[j]]) == 1:
-            transaction.append(sortProduct[j])
-    dataSort.append(transaction)
-
-#построить FPдерево
-fptree = []
-for i in sortProduct:
-    fptree.append(list())
+    data = []
+    dataLength = 0
+    with open(dataFileName, 'rb') as f:
+        reader = csv.reader(f)
+        for row in reader:
+            del row[:1]
+            data.append(row)
+            dataLength = dataLength + 1
 
 
-v0 = FPNode()
-for d in dataSort:
-    v = v0
-    for pr in d:
-        n = v.isProductInNext(pr)
-        if n == None:
-            n = FPNode(pr, v)
-            v.addNext(n)
-            fptree[sortProduct.index(pr)].append(n)
-        v = n
-        v.addSupp()
+    startTime = time.time()
 
-r = []
-phi = []
-fptree1 = copy.deepcopy(fptree)
-arrayOfSets = []
-FPFind(sortProduct, dataLength, minsup, fptree1, v0, phi, r, arrayOfSets)
+    product = [i for i in range(len(data[0]))]
 
-#вывести правила
-rules = []
-rules.append(list())
-rules.append(list())
-for set in r:
-    if len(set) == 1:
-        continue
-    phi = sorted(list(set))
-    y = list()
-    assocRules(rules, phi, y, minconf, arrayOfSets)
+    frequency = {}
+    for i in range(len(product)):
+        s = 0
+        for j in range(dataLength):
+            s = s + int(data[j][i])
+        frequency[i] = s
 
-alltime = time.time() - startTime
-print (alltime)
+    #отсортировать product по frequency
+    sortProduct = []
+    SortProductByFrequency(sortProduct, frequency, dataLength, minsup)
 
-for i in range(len(rules[1])):
-    print(str(rules[0][i]) + " -> " + str(rules[1][i]))
+    #перебрать построчно data в порядке frequency, формируя списки номеров продуктов, если 1 есть в нужном продукте
+    dataSort = []
+    SortingDataTransactions(dataLength, sortProduct, dataSort, data)
+
+    #построить FPдерево
+    fptree = []
+    v0 = MakeFPTree(fptree, sortProduct, dataSort)
+
+    r = []
+    phi = []
+    fptree1 = copy.deepcopy(fptree)
+    arrayOfSets = []
+    FPFind(sortProduct, dataLength, minsup, fptree1, v0, phi, r, arrayOfSets)
+
+    #вывести правила
+    rules = []
+    rules.append(list())
+    rules.append(list())
+    for set in r:
+        if len(set) == 1:
+            continue
+        phi = sorted(list(set))
+        y = list()
+        assocRules(rules, phi, y, minconf, arrayOfSets)
+
+    alltime = time.time() - startTime
+    print (alltime)
+
+    for i in range(len(rules[1])):
+        print(str(rules[0][i]) + " -> " + str(rules[1][i]))
 
